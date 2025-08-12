@@ -26,7 +26,7 @@ This module is the foundation for deploying containerized applications using Kub
 
 ## Prerequisites
 
-1.  **VPC with Public and Private Subnets**: You must have a VPC with both public and private subnets across at least two Availability Zones. The `01-vpc` module creates this.
+1.  **VPC with Public and Private Subnets**: You must have a VPC with both public and private subnets across at least two Availability Zones.
 2.  **Terraform and AWS CLI**: Configured and ready to use.
 3.  **kubectl**: The [Kubernetes command-line tool](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/) must be installed.
 4.  **Helm**: The [Helm package manager for Kubernetes](https://helm.sh/docs/intro/install/) must be installed.
