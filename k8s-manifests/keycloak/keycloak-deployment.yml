@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: keycloak-deployment
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: keycloak
@@ -14,7 +14,8 @@ spec:
     spec:
       containers:
         - name: keycloak
-          image: quay.io/keycloak/keycloak:latest
+          image: quay.io/keycloak/keycloak:24.0.4
+          # TODO: Change to "start" for production.
           command: ["/opt/keycloak/bin/kc.sh", "start-dev"]
           ports:
             - name: http
@@ -38,3 +39,13 @@ spec:
                 secretKeyRef:
                   key: POSTGRES_PASSWORD
                   name: postgres-secret
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - keycloak
+              topologyKey: "kubernetes.io/hostname"

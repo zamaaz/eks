@@ -1,12 +1,15 @@
 prometheus:
   alertmanager:
-    enabled: false
+    enabled: true
   grafana:
     enabled: false
 
-grafana:
-  adminPassword: "admin"
+  server:
+    persistentVolume:
+      enabled: true
+      size: "50Gi"
 
+grafana:
   datasources:
     datasources.yaml:
       apiVersion: 1
@@ -16,3 +19,7 @@ grafana:
           url: http://my-monitoring-prometheus-server.monitoring.svc.cluster.local
           access: proxy
           isDefault: true
+  persistence:
+    enabled: true
+    type: pvc
+    size: "10Gi"
