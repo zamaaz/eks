@@ -39,18 +39,13 @@ variable "node_min_size" {
 variable "node_max_size" {
   description = "The maximum number of nodes in the node group."
   type        = number
-  default     = 3
+  default     = 4
 }
 
 variable "node_desired_size" {
   description = "The desired number of nodes to start with."
   type        = number
   default     = 2
-}
-
-variable "key_name" {
-  description = "The EC2 key pair name for SSH access to the worker nodes."
-  type        = string
 }
 
 # --- Required Networking Inputs ---
@@ -67,5 +62,10 @@ variable "public_subnet_ids" {
 
 variable "private_subnet_ids" {
   description = "A list of private subnet IDs for the worker nodes."
+  type        = list(string)
+}
+
+variable "api_allowed_cidrs" {
+  description = "List of CIDRs allowed to access the EKS public API endpoint."
   type        = list(string)
 }

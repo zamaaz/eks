@@ -80,6 +80,7 @@ resource "aws_iam_role" "ebs_csi_driver_role" {
         Condition = {
           StringEquals = {
             "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub" = "system:serviceaccount:kube-system:ebs-csi-controller-sa"
+            "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:aud" = "sts.amazonaws.com" # <—
           }
         }
       }
@@ -92,18 +93,42 @@ resource "aws_iam_role_policy_attachment" "ebs_csi_driver_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
 }
 
+# KMS Management
+resource "aws_kms_key" "eks_secrets" {
+  description             = "KMS key for EKS secrets encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+}
+
 resource "aws_eks_cluster" "default" {
   name     = var.cluster_name
   version  = var.k8s_version
   role_arn = aws_iam_role.eks_cluster_role.arn
 
   vpc_config {
-    subnet_ids = concat(var.public_subnet_ids, var.private_subnet_ids)
+    subnet_ids              = concat(var.public_subnet_ids, var.private_subnet_ids)
+    endpoint_public_access  = true
+    endpoint_private_access = true
+    public_access_cidrs     = var.api_allowed_cidrs
+  }
+
+  enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+
+  encryption_config {
+    provider {
+      key_arn = aws_kms_key.eks_secrets.arn
+    }
+    resources = ["secrets"]
   }
 
   depends_on = [
     aws_iam_role_policy_attachment.eks_cluster_policy,
   ]
+
+  tags = {
+    Environment = "dev"
+    ManagedBy   = "Terraform"
+  }
 }
 
 resource "aws_eks_node_group" "default" {
@@ -119,9 +144,16 @@ resource "aws_eks_node_group" "default" {
     min_size     = var.node_min_size
   }
 
+  update_config { max_unavailable = 1 }
+
   depends_on = [
     aws_iam_role_policy_attachment.eks_node_policies
   ]
+
+  tags = {
+    Environment = "dev"
+    ManagedBy   = "Terraform"
+  }
 }
 
 # This resource is needed for the EBS CSI driver role to work correctly.
@@ -139,4 +171,19 @@ resource "aws_eks_addon" "ebs_csi" {
   cluster_name             = aws_eks_cluster.default.name
   addon_name               = "aws-ebs-csi-driver"
   service_account_role_arn = aws_iam_role.ebs_csi_driver_role.arn
+}
+
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name = aws_eks_cluster.default.name
+  addon_name   = "vpc-cni"
+}
+
+resource "aws_eks_addon" "coredns" {
+  cluster_name = aws_eks_cluster.default.name
+  addon_name   = "coredns"
+}
+
+resource "aws_eks_addon" "kube_proxy" {
+  cluster_name = aws_eks_cluster.default.name
+  addon_name   = "kube-proxy"
 }
